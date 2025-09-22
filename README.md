@@ -1,36 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+---
 
-## Getting Started
+## Setup rapide - Cosmetic Manager
 
-First, run the development server:
+### Prérequis
+- Docker Desktop (WSL2 activé)
+- Node 20+ (ou 22) via NVM  
+- npm ou pnpm
+- (Optionnel) Git
 
+### 1. Cloner & entrer dans le dossier
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <url> cosmetic-manager
+cd cosmetic-manager
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Démarrer Postgres (persistance incluse)
+```bash
+docker volume create cm_pgdata
+docker run -d --name cm-postgres --restart unless-stopped \
+  -e POSTGRES_USER=cm -e POSTGRES_PASSWORD=cm -e POSTGRES_DB=cosmetic \
+  -p 5432:5432 -v cm_pgdata:/var/lib/postgresql/data postgres:16-alpine
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Note :** Si le port 5432 est pris, remplace par `-p 5433:5432` et adapte l'URL ci-dessous.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3. Configurer l'environnement
+Créer un fichier `.env` à la racine :
+```env
+DATABASE_URL=postgres://cm:cm@localhost:5432/cosmetic
+```
 
-## Learn More
+### 4. Installer les dépendances
+```bash
+# npm
+npm install
 
-To learn more about Next.js, take a look at the following resources:
+# ou pnpm  
+pnpm install
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 5. Drizzle (migrations)
+```bash
+# npm
+npm run db:generate && npm run db:migrate
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# pnpm
+pnpm db:generate && pnpm db:migrate
+```
 
-## Deploy on Vercel
+### 6. Lancer l'app
+```bash
+# npm
+npm run dev
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# pnpm
+pnpm dev
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Accéder à l'app :** http://localhost:3000/inventory
+
+---
+
+## Outils utiles
+
+### Studio Drizzle
+```bash
+npm run db:studio
+# ou 
+pnpm db:studio
+```
+
+### Tester la connexion DB
+```bash
+docker exec -it cm-postgres psql -U cm -d cosmetic -c "\dt"
+```
+
+---
+
+## Maintenance
+
+### Voir les conteneurs
+```bash
+docker ps
+```
+
+### Logs
+```bash
+docker logs -f cm-postgres
+```
+
+### Stop / Start
+```bash
+docker stop cm-postgres
+docker start cm-postgres
+```
+
+### Recréer sans perdre les données
+```bash
+docker rm -f cm-postgres
+# puis relancer la commande docker run (le volume cm_pgdata garde les données)
+```
+
+### ⚠️ Reset total (attention, supprime les données)
+```bash
+docker rm -f cm-postgres
+docker volume rm cm_pgdata
+```
